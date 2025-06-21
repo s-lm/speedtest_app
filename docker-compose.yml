@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  speedtest_app:
+    build: .
+    image: speedtest_app
+    container_name: speedtest_app
+    env_file: conf/.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${PWD}/conf/speedtest.cfg:/speedtest_app/conf/speedtest.cfg:ro
+    environment:
+      - SPEEDTEST_SETTINGS=/speedtest_app/conf/speedtest.cfg
+    restart: unless-stopped

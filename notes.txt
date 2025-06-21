@@ -1,0 +1,4 @@
+FLASK_DEBUG=1 FLASK_ENV=development SPEEDTEST_SETTINGS=$PWD/conf/speedtest.cfg FLASK_APP=speedtest_app flask database_init
+FLASK_DEBUG=1 FLASK_ENV=development SPEEDTEST_SETTINGS=$PWD/conf/speedtest.cfg FLASK_APP=speedtest_app flask run
+
+gunicorn --env SPEEDTEST_SETTINGS=${PWD}/conf/speedtest.cfg --bind 0.0.0.0:8080 --threads 5 --reuse-port --forwarded-allow-ips "*" "speedtest_app:create_app()"

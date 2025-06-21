@@ -1,0 +1,28 @@
+# Ignore git history
+.git
+.gitignore
+
+# Node, Python, etc. environments
+node_modules
+venv
+__pycache__/
+
+# Mac/OSX and system files
+.DS_Store
+Thumbs.db
+
+# Build output or temp files
+*.log
+*.tmp
+*.bak
+
+# GitHub workflows (not needed inside the image)
+.github/
+
+# other files
+data*.csv
+notes.txt
+conf/
+Dockerfile
+docker-compose.yml
+README.md
