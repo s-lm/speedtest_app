@@ -12,6 +12,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && rm requirements.txt
 RUN mkdir -p /speedtest_app/conf
 COPY speedtest_app /speedtest_app
+COPY conf/speedtest.cfg /speedtest_app/conf/speedtest.cfg
 
 # Expose port
 EXPOSE 8080
