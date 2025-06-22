@@ -22,7 +22,7 @@ Thumbs.db
 # other files
 data*.csv
 notes.txt
-conf/
+conf/.env
 Dockerfile
 docker-compose.yml
 README.md
