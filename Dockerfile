@@ -18,4 +18,4 @@ COPY conf/speedtest.cfg /speedtest_app/conf/speedtest.cfg
 EXPOSE 8080
 
 # Run app
-CMD ["gunicorn", "--env", "/speedtest_app/conf/speedtest.cfg", "--bind", "0.0.0.0:8080", "--threads", "5", "--reuse-port", "--forwarded-allow-ips", "*", "speedtest_app:create_app()"]
+CMD ["gunicorn", "--env", "SPEEDTEST_SETTINGS=/speedtest_app/conf/speedtest.cfg", "--bind", "0.0.0.0:8080", "--threads", "5", "--reuse-port", "--forwarded-allow-ips", "*", "speedtest_app:create_app()"]
