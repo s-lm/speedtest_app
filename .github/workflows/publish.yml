@@ -9,6 +9,7 @@ on:
       - .github/workflows/publish.yml
       - '**/*.py'
       - conf/**
+  workflow_dispatch:
 
 jobs:
   build-and-push:
