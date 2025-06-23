@@ -1,4 +1,6 @@
 import datetime
+import os
+import base64
 from flask import Blueprint, render_template, current_app, request, flash, redirect, session, jsonify
 from flask.helpers import send_from_directory, url_for
 from .database import SpeedTest
@@ -40,13 +42,16 @@ def login():
     if not current_app.config.get("ENABLE_OIDC", False):
         return redirect(url_for(".show"))
     redirect_uri = url_for(".auth_callback", _external=True)
-    return oauth.oidc.authorize_redirect(redirect_uri)
+    nonce = base64.urlsafe_b64encode(os.urandom(16)).decode("utf-8")
+    session["oidc_nonce"] = nonce
+    return oauth.oidc.authorize_redirect(redirect_uri, nonce=nonce)
 
 
 @blueprint.route("/auth/callback")
 def auth_callback():
     token = oauth.oidc.authorize_access_token()
-    userinfo = oauth.oidc.parse_id_token(token)
+    nonce = session.pop("oidc_nonce", None)
+    userinfo = oauth.oidc.parse_id_token(token, nonce=nonce)
     session["user"] = userinfo
     next_url = request.args.get("next") or url_for(".show")
     return redirect(next_url)
