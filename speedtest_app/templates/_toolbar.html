@@ -1,0 +1,17 @@
+{% macro toolbar(user=None) %}
+<div id="top-bar" style="display:flex;align-items:center;justify-content:space-between;padding:0.05rem 1rem;background:var(--card);border-radius:16px;margin-bottom:1.5rem;">
+    <div>
+        <h1>Speedtest App</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+        {% if user %}
+            <img src="{{ user.picture }}" alt="User Picture" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;">
+            <span>{{ user.name or user.email }}</span>
+            <a href="{{ url_for('routing.logout') }}" style="margin-left:0.5rem;">Logout</a>
+        {% elif ENABLE_OIDC %}
+            <a href="{{ url_for('routing.login') }}">Login</a>
+        {% endif %}
+        <button id="themeToggle" title="Toggle Dark/Light Mode" style="margin-left:1rem;">🌙</button>
+    </div>
+</div>
+{% endmacro %}

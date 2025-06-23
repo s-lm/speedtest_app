@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Speedtest Graph</title>
+    <title>Speedtest App</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/speedtest.css') }}">
@@ -10,20 +10,15 @@
     <script src="{{ url_for('static', filename='js/chartjs-adapter-date-fns.bundle.min.js') }}"></script>
 </head>
 <body>
-    <button id="themeToggle" title="Toggle Dark/Light Mode">🌙</button>
-
-    <h1>📊 Internet Speed Test History</h1>
+    {% from "_toolbar.html" import toolbar %}
+    {{ toolbar(session.user if session.get('user') else None) }}
+    <h2>📊 Internet Speed Test History</h2>
 
     <div class="month-selector">
         <label for="monthSelect">Select Month:</label>
         <select id="monthSelect"></select>
     </div>
 
-    <!-- <div id="pagination-controls" style="margin-bottom:1rem;">
-        <button id="prevPage" disabled>Previous</button>
-        <span id="pageInfo"></span>
-        <button id="nextPage" disabled>Next</button>
-    </div> -->
     <div id="pagination-controls" style="margin-bottom:1rem;">
         <button id="prevPage" disabled title="Previous Page">◀</button>
         <span id="pageInfo"></span>

@@ -2,8 +2,10 @@ import datetime
 from flask import Blueprint, render_template, current_app, request, flash, redirect, session, jsonify
 from flask.helpers import send_from_directory, url_for
 from .database import SpeedTest
+from .authlib_client import oauth
 
-blueprint = Blueprint('routing', __name__)
+
+blueprint = Blueprint("routing", __name__)
 
 
 @blueprint.app_template_filter("datetime")
@@ -21,7 +23,43 @@ def before_request():
         current_app.logger.debug(request.headers)
 
 
+def oidc_required(f):
+    """Decorator to require OIDC only if enabled."""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if current_app.config.get("ENABLE_OIDC", False):
+            if "user" not in session:
+                return redirect(url_for(".login", next=request.url))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@blueprint.route("/login")
+def login():
+    if not current_app.config.get("ENABLE_OIDC", False):
+        return redirect(url_for(".show"))
+    redirect_uri = url_for(".auth_callback", _external=True)
+    return oauth.oidc.authorize_redirect(redirect_uri)
+
+
+@blueprint.route("/auth/callback")
+def auth_callback():
+    token = oauth.oidc.authorize_access_token()
+    userinfo = oauth.oidc.parse_id_token(token)
+    session["user"] = userinfo
+    next_url = request.args.get("next") or url_for(".show")
+    return redirect(next_url)
+
+
+@blueprint.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for(".show"))
+
+    
 @blueprint.route("/api/data")
+@oidc_required
 def api_data():
     page = request.args.get("page", default=1, type=int)
     per_page = request.args.get("per_page", default=500, type=int)
@@ -54,24 +92,8 @@ def api_data():
     })
 
 
-# @blueprint.route("/leave")
-# def leave():
-#     um.reset_session()
-#     return render_template(
-#             "leave.html",
-#             cluster=current_app.config[CONFIG_CLUSTER])
-
-
-# @blueprint.route("/")
-# @um.roles_required(ROLE_ACCESS, not_authorized)
-# def show_overview():
-#     return render_template(
-#             "overview.html"
-#             , username=um.get_user_fullname()
-#             , cluster=current_app.config[CONFIG_CLUSTER]
-#             , tables=queries.get_overview())
-
 
 @blueprint.route("/", methods=["GET"])
+@oidc_required
 def show():
     return render_template("show.html")

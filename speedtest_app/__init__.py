@@ -7,7 +7,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from .database import db
 from . import routing
 from . import database_init
+from .authlib_client import init_oauth
 from .run_speedtest import run_speedtest
+
 
 def create_app(base_config = None):
     if base_config is None:
@@ -22,6 +24,14 @@ def create_app(base_config = None):
     app.config.from_object(__name__)
     app.config.update(base_config)
     app.config.from_envvar("SPEEDTEST_SETTINGS", silent=True)
+
+
+    @app.context_processor
+    def inject_config():
+        return dict(ENABLE_OIDC=app.config.get("ENABLE_OIDC", False))
+
+    # init oidc
+    init_oauth(app)
 
     # init logging
     logging.basicConfig(
