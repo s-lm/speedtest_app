@@ -1,8 +1,8 @@
 import datetime
 import os
 import base64
-from flask import Blueprint, render_template, current_app, request, flash, redirect, session, jsonify
-from flask.helpers import send_from_directory, url_for
+from flask import Blueprint, render_template, current_app, request, redirect, session, jsonify
+from flask.helpers import url_for
 from .database import SpeedTest
 from .authlib_client import oauth
 
@@ -54,6 +54,7 @@ def auth_callback():
     userinfo = oauth.oidc.parse_id_token(token, nonce=nonce)
     session["user"] = userinfo
     next_url = request.args.get("next") or url_for(".show")
+    current_app.logger.info(f"User {userinfo['preferred_username']} logged in successfully.")
     return redirect(next_url)
 
 
@@ -101,4 +102,6 @@ def api_data():
 @blueprint.route("/", methods=["GET"])
 @oidc_required
 def show():
+    current_app.logger.info(f"User {session.get('user', {}).
+            get('preferred_username', 'unknown')} accessed url: {request.url}")
     return render_template("show.html")

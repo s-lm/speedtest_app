@@ -1,17 +1,29 @@
-{% macro toolbar(user=None) %}
+{% macro toolbar(user=None, ENABLE_OIDC=False) %}
 <div id="top-bar" style="display:flex;align-items:center;justify-content:space-between;padding:0.05rem 1rem;background:var(--card);border-radius:16px;margin-bottom:1.5rem;">
     <div>
         <h1>Speedtest App</h1>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;">
-        {% if user %}
-            <img src="{{ user.picture }}" alt="User Picture" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;">
-            <span>{{ user.name or user.email }}</span>
-            <a href="{{ url_for('routing.logout') }}" style="margin-left:0.5rem;">Logout</a>
-        {% elif ENABLE_OIDC %}
-            <a href="{{ url_for('routing.login') }}">Login</a>
-        {% endif %}
-        <button id="themeToggle" title="Toggle Dark/Light Mode" style="margin-left:1rem;">🌙</button>
+        <div class="toolbar-dropdown">
+            <button class="toolbar-dropbtn" aria-haspopup="true" aria-expanded="false">
+                {% if ENABLE_OIDC and user %}
+                <img src="{{ user.picture }}" alt="User Picture" class="toolbar-usericon">
+                <span>{{ user.preferred_username or user.name or user.email }}</span>
+                {% else %}
+                <img src="{{ url_for('static', filename='img/generic-user.svg') }}" alt="User" class="toolbar-usericon">
+                <span>Guest</span>
+                {% endif %}
+                <span class="toolbar-caret">▼</span>
+            </button>
+            <div class="toolbar-dropdown-content">
+                <button id="themeToggle" type="button"><span class="theme-icon">🌙</span> Toggle Theme</button>
+                {% if ENABLE_OIDC and user %}
+                <a href="{{ url_for('routing.logout') }}">🚪 Logout</a>
+                {% elif ENABLE_OIDC %}
+                <a href="{{ url_for('routing.login') }}">🔑 Login</a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endmacro %}

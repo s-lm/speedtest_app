@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <title>Speedtest App</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/speedtest.css') }}">
+    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </head>
 <body>
     {% from "_toolbar.html" import toolbar %}
-    {{ toolbar(session.user if session.get('user') else None) }}
+    {{ toolbar(session.user if session.get('user') else None, ENABLE_OIDC) }}
     <div style="text-align:center;margin-top:4rem;">
         <h2>Sign in to continue</h2>
         <a href="{{ url_for('main.login', next=request.args.get('next', url_for('main.show'))) }}" style="padding:0.7rem 1.5rem;font-size:1.2rem;border-radius:4px;background:var(--card);color:var(--fg);border:1px solid var(--border);text-decoration:none;display:inline-block;margin-top:2rem;">

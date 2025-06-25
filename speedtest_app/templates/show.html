@@ -6,12 +6,13 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/speedtest.css') }}">
+    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chartjs-adapter-date-fns.bundle.min.js') }}"></script>
 </head>
 <body>
     {% from "_toolbar.html" import toolbar %}
-    {{ toolbar(session.user if session.get('user') else None) }}
+    {{ toolbar(session.user if session.get('user') else None, ENABLE_OIDC) }}
     <h2>📊 Internet Speed Test History</h2>
 
     <div class="month-selector">
@@ -29,21 +30,6 @@
     <canvas id="speedChart" width="800" height="400"></canvas>
 
     <script>
-        // Theme handling
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const savedTheme = localStorage.getItem('theme');
-        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-        if (theme === 'dark') document.body.classList.add('dark');
-        document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
-
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            const isDark = document.body.classList.contains('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
-            applyChartTheme(isDark);
-        });
-
         // Data and pagination
         let allPoints = [];
         let months = [];

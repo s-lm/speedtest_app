@@ -98,3 +98,81 @@ h2 {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.toolbar-dropdown {
+    position: relative;
+    display: inline-block;
+}
+.toolbar-dropbtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+    justify-content: flex-start; /* <-- ensures left alignment */
+    text-align: left;            /* <-- ensures left alignment */
+    min-width: 0;
+}
+.toolbar-usericon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    vertical-align: middle;
+    object-fit: cover;
+    background: var(--border);
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+.toolbar-dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%; /* Attach directly below the button */
+    background-color: var(--card);
+    min-width: 170px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.12);
+    border-radius: 8px;
+    z-index: 1;
+    /* Remove margin-top */
+}
+.toolbar-dropdown-content a,
+.toolbar-dropdown-content button {
+    color: var(--fg);
+    padding: 0.7rem 1.2rem;
+    text-decoration: none;
+    display: block;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+.toolbar-dropdown-content a:hover,
+.toolbar-dropdown-content button:hover {
+    background-color: var(--border);
+}
+.toolbar-dropdown:hover .toolbar-dropdown-content,
+.toolbar-dropdown:focus-within .toolbar-dropdown-content,
+.toolbar-dropdown-content:hover,
+.toolbar-dropdown-content:focus-within {
+    display: block;
+}
+.toolbar-caret {
+    margin-left: 0.3rem;
+    font-size: 1rem;
+}
+
+/* Toolbar container */
+#top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.05rem 1rem;
+    background: var(--card);
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+}
