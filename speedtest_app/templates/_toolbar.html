@@ -16,7 +16,7 @@
                 <span class="toolbar-caret">▼</span>
             </button>
             <div class="toolbar-dropdown-content">
-                <button id="themeToggle" type="button"><span class="theme-icon">🌙</span> Toggle Theme</button>
+                <button id="themeToggle" type="button"><span class="theme-icon">🌙</span><span>Toggle Theme</span></button>
                 {% if ENABLE_OIDC and user %}
                 <a href="{{ url_for('routing.logout') }}">🚪 Logout</a>
                 {% elif ENABLE_OIDC %}

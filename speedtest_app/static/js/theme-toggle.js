@@ -18,12 +18,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = localStorage.getItem('theme');
     const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-    if (theme === 'dark') document.body.classList.add('dark');
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
     updateThemeIcon(theme === 'dark');
 
     themeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark');
-        const isDark = document.body.classList.contains('dark');
+        document.documentElement.classList.toggle('dark');
+        const isDark = document.documentElement.classList.contains('dark');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         updateThemeIcon(isDark);
         if (typeof applyChartTheme === 'function') applyChartTheme(isDark);

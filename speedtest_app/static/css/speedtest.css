@@ -161,12 +161,16 @@ h2 {
     border-radius: 8px;
     z-index: 1;
 }
+
+/* Dropdown content styling */
 .toolbar-dropdown-content a,
 .toolbar-dropdown-content button {
     color: var(--fg);
     padding: 0.7rem 1.2rem;
     text-decoration: none;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     background: none;
     border: none;
     width: 100%;
@@ -175,6 +179,7 @@ h2 {
     font-size: 1rem;
     font-weight: normal;
     cursor: pointer;
+    box-sizing: border-box;
 }
 .toolbar-dropdown-content a:hover,
 .toolbar-dropdown-content button:hover {
