@@ -6,6 +6,15 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/speedtest.css') }}">
+    <!-- Prevent theme flash -->
+    <script>
+    (function() {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const savedTheme = localStorage.getItem('theme');
+        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+    })();
+    </script>
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chartjs-adapter-date-fns.bundle.min.js') }}"></script>
@@ -26,7 +35,6 @@
         <button id="nextPage" disabled title="Next Page">▶</button>
     </div>
 
-
     <canvas id="speedChart" width="800" height="400"></canvas>
 
     <script>
@@ -39,7 +47,7 @@
 
         // Chart initialization (ONCE, at startup)
         const ctx = document.getElementById('speedChart').getContext('2d');
-        const isDark = document.body.classList.contains('dark');
+        const isDark = document.documentElement.classList.contains('dark');
         window.speedChart = new Chart(ctx, {
             type: 'line',
             data: {
