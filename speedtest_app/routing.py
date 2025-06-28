@@ -37,7 +37,7 @@ def oidc_required(f):
     return wrapper
 
 
-@blueprint.route("/login")
+@blueprint.route("/auth/login")
 def login():
     if not current_app.config.get("ENABLE_OIDC", False):
         return redirect(url_for(".show"))
@@ -58,7 +58,7 @@ def auth_callback():
     return redirect(next_url)
 
 
-@blueprint.route("/logout")
+@blueprint.route("/auth/logout", methods=["POST"])
 def logout():
     session.pop("user", None)
     return redirect(url_for(".show"))
