@@ -15,9 +15,9 @@ def create_app(base_config = None):
     if base_config is None:
         base_config = {}
     base_config.update(
-        # SESSION_COOKIE_SECURE   = True,
-        # SESSION_COOKIE_HTTPONLY = True,
-        # SESSION_COOKIE_SAMESITE = "Lax",
+        SESSION_COOKIE_SECURE   = True,
+        SESSION_COOKIE_HTTPONLY = True,
+        SESSION_COOKIE_SAMESITE = "Lax",
     )
 
     app = Flask(__name__)

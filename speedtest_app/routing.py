@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, current_app, request, redirect, se
 from flask.helpers import url_for
 from .database import SpeedTest
 from .authlib_client import oauth
+import sqlalchemy as db
 
 
 blueprint = Blueprint("routing", __name__)
@@ -61,18 +62,20 @@ def auth_callback():
 @blueprint.route("/auth/logout", methods=["POST"])
 def logout():
     session.pop("user", None)
-    return redirect(url_for(".show"))
+    return redirect(url_for("routing.login"))
 
     
 @blueprint.route("/api/data")
 @oidc_required
 def api_data():
-    page = request.args.get("page", default=1, type=int)
-    per_page = request.args.get("per_page", default=500, type=int)
-
-    pagination = SpeedTest.query.order_by(SpeedTest.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    items = pagination.items
-
+    year = request.args.get("year", type=int)
+    month = request.args.get("month", type=int)
+    query = SpeedTest.query.order_by(SpeedTest.timestamp.desc())
+    if year:
+        query = query.filter(db.extract('year', SpeedTest.timestamp) == year)
+    if month:
+        query = query.filter(db.extract('month', SpeedTest.timestamp) == month)
+    items = query.all()
     results = []
     for r in items:
         results.append({
@@ -83,20 +86,38 @@ def api_data():
             "sponsor": r.sponsor,
             "server": r.server_name,
             "distance": r.distance,
-            "ip": r.client_ip,      # renamed for frontend
-            "isp": r.client_isp,    # additional field
+            "ip": r.client_ip,
+            "isp": r.client_isp,
         })
-
     return jsonify({
         "data": results,
-        "page": page,
-        "per_page": per_page,
-        "total": pagination.total,
-        "pages": pagination.pages,
-        "has_next": pagination.has_next,
-        "has_prev": pagination.has_prev,
+        "year": year,
+        "month": month,
+        "total": len(results),
     })
 
+
+@blueprint.route("/api/years_months")
+@oidc_required
+def api_years_months():
+    # Returns: {2024: [1,2,3], 2023: [12,11,10], ...}
+    from sqlalchemy import extract
+    results = (
+        SpeedTest.query
+        .with_entities(
+            db.func.extract('year', SpeedTest.timestamp).label('year'),
+            db.func.extract('month', SpeedTest.timestamp).label('month')
+        )
+        .distinct()
+        .order_by(db.desc('year'), db.desc('month'))
+        .all()
+    )
+    data = {}
+    for year, month in results:
+        year = int(year)
+        month = int(month)
+        data.setdefault(year, []).append(month)
+    return jsonify(data)
 
 
 @blueprint.route("/", methods=["GET"])

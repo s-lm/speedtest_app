@@ -1,6 +1,7 @@
 {% macro toolbar(user=None, ENABLE_OIDC=False) %}
 <div id="top-bar">
-    <div>
+    <div style="display: flex; align-items: center; gap: 0.7rem;">
+        <img src="{{ url_for('static', filename='img/apple-touch-icon.png') }}" style="width:32px;height:32px;border-radius:8px;">
         <h1>Speedtest App</h1>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;">

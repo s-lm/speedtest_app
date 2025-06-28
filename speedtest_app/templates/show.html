@@ -22,28 +22,18 @@
 <body>
     {% from "_toolbar.html" import toolbar %}
     {{ toolbar(session.user if session.get('user') else None, ENABLE_OIDC) }}
-    <h2>📊 Internet Speed Test History</h2>
 
-    <div class="month-selector">
-        <label for="monthSelect">Select Month:</label>
+    <div class="year-month-selector">
+        <label for="yearSelect">Year:</label>
+        <select id="yearSelect"></select>
+        <label for="monthSelect">Month:</label>
         <select id="monthSelect"></select>
-    </div>
-
-    <div id="pagination-controls" style="margin-bottom:1rem;">
-        <button id="prevPage" disabled title="Previous Page">◀</button>
-        <span id="pageInfo"></span>
-        <button id="nextPage" disabled title="Next Page">▶</button>
     </div>
 
     <canvas id="speedChart" width="800" height="400"></canvas>
 
     <script>
-        // Data and pagination
         let allPoints = [];
-        let months = [];
-        let currentPage = 1;
-        let perPage = 500;
-        let totalPages = 1;
 
         // Chart initialization (ONCE, at startup)
         const ctx = document.getElementById('speedChart').getContext('2d');
@@ -60,11 +50,6 @@
             },
             options: createChartOptions(isDark)
         });
-
-        function getMonthKey(dateStr) {
-            const date = new Date(dateStr);
-            return date.toISOString().slice(0, 7);  // "YYYY-MM"
-        }
 
         function updateChart(points) {
             if (!window.speedChart) {
@@ -181,8 +166,48 @@
             chart.update();
         }
 
-        function fetchAndRender(page = 1) {
-            fetch(`/api/data?page=${page}&per_page=${perPage}`)
+        // Fetch years and months and populate selectors
+        fetch('/api/years_months')
+            .then(response => response.json())
+            .then(data => {
+                const yearSelect = document.getElementById('yearSelect');
+                const monthSelect = document.getElementById('monthSelect');
+                yearSelect.innerHTML = '';
+                monthSelect.innerHTML = '';
+                const years = Object.keys(data).sort((a, b) => b - a);
+                years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                });
+                function updateMonths() {
+                    const selectedYear = yearSelect.value;
+                    const months = (data[selectedYear] || []).sort((a, b) => b - a);
+                    monthSelect.innerHTML = '';
+                    months.forEach(month => {
+                        const option = document.createElement('option');
+                        option.value = month;
+                        option.textContent = month.toString().padStart(2, '0');
+                        monthSelect.appendChild(option);
+                    });
+                }
+                yearSelect.onchange = () => {
+                    updateMonths();
+                    fetchAndRender(yearSelect.value, monthSelect.value);
+                };
+                monthSelect.onchange = () => {
+                    fetchAndRender(yearSelect.value, monthSelect.value);
+                };
+                if (years.length > 0) {
+                    yearSelect.value = years[0];
+                    updateMonths();
+                    fetchAndRender(yearSelect.value, monthSelect.value);
+                }
+            });
+
+        function fetchAndRender(year, month) {
+            fetch(`/api/data?year=${year}&month=${month}`)
                 .then(response => response.json())
                 .then(result => {
                     allPoints = result.data.map(row => ({
@@ -194,50 +219,11 @@
                         server: row.server,
                         distance: row.distance,
                         ip: row.ip,
-                        isp: row.isp,
-                        month: getMonthKey(row.timestamp)
+                        isp: row.isp
                     }));
-
-                    months = [...new Set(allPoints.map(p => p.month))].sort().reverse();
-                    const select = document.getElementById('monthSelect');
-                    select.innerHTML = '';
-                    months.forEach(month => {
-                        const option = document.createElement('option');
-                        option.value = month;
-                        option.textContent = month;
-                        select.appendChild(option);
-                    });
-
-                    // Only update chart if there is at least one month of data and chart is initialized
-                    if (months.length > 0 && window.speedChart) {
-                        select.value = months[0];
-                        updateChart(allPoints.filter(p => p.month === months[0]));
-                    }
-
-                    select.onchange = (e) => {
-                        const month = e.target.value;
-                        updateChart(allPoints.filter(p => p.month === month));
-                    };
-
-                    // Pagination controls
-                    currentPage = result.page;
-                    totalPages = result.pages;
-                    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
-                    document.getElementById('prevPage').disabled = !result.has_prev;
-                    document.getElementById('nextPage').disabled = !result.has_next;
+                    updateChart(allPoints);
                 });
         }
-
-        document.getElementById('prevPage').onclick = () => {
-            if (currentPage > 1) fetchAndRender(currentPage - 1);
-        };
-
-        document.getElementById('nextPage').onclick = () => {
-            if (currentPage < totalPages) fetchAndRender(currentPage + 1);
-        };
-
-        // Initial load
-        fetchAndRender();
     </script>
 </body>
 </html>
