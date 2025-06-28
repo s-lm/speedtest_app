@@ -62,9 +62,9 @@ def auth_callback():
 @blueprint.route("/auth/logout", methods=["POST"])
 def logout():
     session.pop("user", None)
-    return redirect(url_for("routing.login"))
+    # return redirect(url_for("routing.login"))
+    return render_template("login.html")
 
-    
 @blueprint.route("/api/data")
 @oidc_required
 def api_data():
