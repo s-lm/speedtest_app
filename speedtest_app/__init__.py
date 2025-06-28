@@ -57,7 +57,7 @@ def create_app(base_config = None):
             run_speedtest()
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(func=run_speedtest_with_context, trigger="cron", hour="*/6", minute="15",)
+    scheduler.add_job(func=run_speedtest_with_context, trigger="cron", hour="*/8", minute="15",)
     scheduler.start()
 
     # clean shutdown
