@@ -1,19 +1,20 @@
 {% macro toolbar(user=None, ENABLE_OIDC=False) %}
 <div id="top-bar">
     <div style="display: flex; align-items: center; gap: 0.7rem;">
-        <img src="{{ url_for('static', filename='img/apple-touch-icon.png') }}" style="width:32px;height:32px;border-radius:8px;">
+        <img src="{{ url_for('static', filename='img/apple-touch-icon.png') }}"
+            style="width:32px;height:32px;border-radius:8px;">
         <h1>Speedtest App</h1>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;">
         <div class="toolbar-dropdown">
             <button class="toolbar-dropbtn" aria-haspopup="true" aria-expanded="false">
-                {% if ENABLE_OIDC and user %}
-                    <img src="{{ user.picture }}" alt="User Picture" class="toolbar-usericon">
-                    <span>{{ user.preferred_username or user.name or user.email }}</span>
-                {% else %}
-                    <img src="{{ url_for('static', filename='img/generic-user.svg') }}" alt="User" class="toolbar-usericon">
-                    <span>Guest</span>
-                {% endif %}
+                {% if ENABLE_OIDC and user -%}
+                <img src="{{ user.picture }}" alt="User Picture" class="toolbar-usericon">
+                <span>{{ user.preferred_username or user.name or user.email }}</span>
+                {% else -%}
+                <img src="{{ url_for('static', filename='img/generic-user.svg') }}" alt="User" class="toolbar-usericon">
+                <span>Guest</span>
+                {% endif -%}
                 <span class="toolbar-caret">▼</span>
             </button>
             <div class="toolbar-dropdown-content">
@@ -21,21 +22,21 @@
                     <span class="theme-icon"></span>
                     <span>Toggle Theme</span>
                 </button>
-                {% if ENABLE_OIDC and user %}
-                <form method="post" action="{{ url_for('routing.logout') }}" style="margin:0;padding:0;">
+                {% if ENABLE_OIDC and user -%}
+                <form method="get" action="{{ url_for('routing.logout') }}" style="margin:0;padding:0;">
                     <button type="submit" class="logout-btn">
                         <span class="logout-icon"></span>
                         <span>Logout</span>
                     </button>
                 </form>
-                {% elif ENABLE_OIDC %}
+                {% elif ENABLE_OIDC -%}
                 <form method="get" action="{{ url_for('routing.login') }}" style="margin:0;padding:0;">
                     <button type="submit" class="login-btn">
                         <span class="login-icon"></span>
                         <span>Login</span>
                     </button>
                 </form>
-                {% endif %}
+                {% endif -%}
             </div>
         </div>
     </div>

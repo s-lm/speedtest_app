@@ -4,7 +4,7 @@ import base64
 from flask import Blueprint, render_template, current_app, request, redirect, session, jsonify
 from flask.helpers import url_for
 from .database import SpeedTest
-from .authlib_client import oauth
+from .authlib_client import oidc_required, do_login, callback, reset_session
 import sqlalchemy as db
 
 
@@ -26,44 +26,24 @@ def before_request():
         current_app.logger.debug(request.headers)
 
 
-def oidc_required(f):
-    """Decorator to require OIDC only if enabled."""
-    from functools import wraps
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if current_app.config.get("ENABLE_OIDC", False):
-            if "user" not in session:
-                return redirect(url_for(".login", next=request.url))
-        return f(*args, **kwargs)
-    return wrapper
-
-
 @blueprint.route("/auth/login")
 def login():
     if not current_app.config.get("ENABLE_OIDC", False):
         return redirect(url_for(".show"))
-    redirect_uri = url_for(".auth_callback", _external=True)
-    nonce = base64.urlsafe_b64encode(os.urandom(16)).decode("utf-8")
-    session["oidc_nonce"] = nonce
-    return oauth.oidc.authorize_redirect(redirect_uri, nonce=nonce)
+    return do_login()
 
 
 @blueprint.route("/auth/callback")
 def auth_callback():
-    token = oauth.oidc.authorize_access_token()
-    nonce = session.pop("oidc_nonce", None)
-    userinfo = oauth.oidc.parse_id_token(token, nonce=nonce)
-    session["user"] = userinfo
-    next_url = request.args.get("next") or url_for(".show")
-    current_app.logger.info(f"User {userinfo['preferred_username']} logged in successfully.")
-    return redirect(next_url)
+    return callback()
 
 
-@blueprint.route("/auth/logout", methods=["POST"])
+@blueprint.route("/auth/logout")
 def logout():
-    session.pop("user", None)
+    reset_session()
     # return redirect(url_for("routing.login"))
     return render_template("login.html")
+
 
 @blueprint.route("/api/data")
 @oidc_required
@@ -120,7 +100,7 @@ def api_years_months():
     return jsonify(data)
 
 
-@blueprint.route("/", methods=["GET"])
+@blueprint.route("/")
 @oidc_required
 def show():
     current_app.logger.info(f"User {session.get('user', {}).
