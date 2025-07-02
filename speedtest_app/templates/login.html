@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Speedtest App</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/speedtest.css') }}">
     <!-- Prevent theme flash -->
     <script>
-    (function() {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const savedTheme = localStorage.getItem('theme');
-        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-        if (theme === 'dark') document.documentElement.classList.add('dark');
-    })();
+        (function () {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem('theme');
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        })();
     </script>
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </head>
+
 <body>
     {% from "_toolbar.html" import toolbar %}
-    {{ toolbar(session.user if session.get('user') else None, ENABLE_OIDC) }}
+    {{ toolbar(session.token.userinfo if session.get('token') else None, ENABLE_OIDC) }}
     <div style="text-align:center;margin-top:4rem;">
         <h2>Sign in to continue</h2>
-        <a href="{{ url_for('routing.login', next=request.args.get('next', url_for('routing.show'))) }}" style="padding:0.7rem 1.5rem;font-size:1.2rem;border-radius:4px;background:var(--card);color:var(--fg);border:1px solid var(--border);text-decoration:none;display:inline-block;margin-top:2rem;">
+        <a href="{{ url_for('routing.login', next=request.args.get('next', url_for('routing.show'))) }}"
+            style="padding:0.7rem 1.5rem;font-size:1.2rem;border-radius:4px;background:var(--card);color:var(--fg);border:1px solid var(--border);text-decoration:none;display:inline-block;margin-top:2rem;">
             🔑 Login with Sol IAM
         </a>
     </div>
 </body>
+
 </html>

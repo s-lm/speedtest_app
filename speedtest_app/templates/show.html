@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Speedtest App</title>
@@ -8,21 +9,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/speedtest.css') }}">
     <!-- Prevent theme flash -->
     <script>
-    (function() {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const savedTheme = localStorage.getItem('theme');
-        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-        if (theme === 'dark') document.documentElement.classList.add('dark');
-    })();
+        (function () {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem('theme');
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+        })();
     </script>
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chart.umd.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chartjs-adapter-date-fns.bundle.min.js') }}"></script>
 </head>
+
 <body>
     {% from "_toolbar.html" import toolbar %}
-    {{ toolbar(session.user if session.get('user') else None, ENABLE_OIDC) }}
-
+    {{ toolbar(session.token.userinfo if session.get('token') else None, ENABLE_OIDC) }}
     <div class="year-month-selector">
         <label for="yearSelect">Year:</label>
         <select id="yearSelect"></select>
@@ -121,7 +122,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const p = context.raw.meta;
                                 if (!p) return '';
                                 if (context.dataset.label === 'Ping (ms)') {
@@ -135,7 +136,7 @@
                                     ];
                                 } else if (context.dataset.label === 'Download Speed (Mbit/s)') {
                                     return [
-                                        `Download: ${(p.download/1_000_000).toFixed(2)} Mbit/s`,
+                                        `Download: ${(p.download / 1_000_000).toFixed(2)} Mbit/s`,
                                         `Sponsor: ${p.sponsor}`,
                                         `Server: ${p.server}`,
                                         `Distance: ${p.distance} km`,
@@ -144,7 +145,7 @@
                                     ];
                                 } else if (context.dataset.label === 'Upload Speed (Mbit/s)') {
                                     return [
-                                        `Upload: ${(p.upload/1_000_000).toFixed(2)} Mbit/s`,
+                                        `Upload: ${(p.upload / 1_000_000).toFixed(2)} Mbit/s`,
                                         `Sponsor: ${p.sponsor}`,
                                         `Server: ${p.server}`,
                                         `Distance: ${p.distance} km`,
@@ -226,4 +227,5 @@
         }
     </script>
 </body>
+
 </html>
