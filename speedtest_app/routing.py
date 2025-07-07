@@ -4,7 +4,7 @@ import base64
 from flask import Blueprint, render_template, current_app, request, redirect, session, jsonify
 from flask.helpers import url_for
 from .database import SpeedTest
-from .authlib_client import oidc_required, do_login, callback, reset_session
+from .authlib_client import oidc_required, do_login, callback, reset_session, get_username
 import sqlalchemy as db
 
 
@@ -24,6 +24,12 @@ def before_request():
     current_app.permanent_session_lifetime = datetime.timedelta(minutes=30)
     if current_app.config.get("ENABLE_TRACE_REQUEST_HDR", False):
         current_app.logger.debug(request.headers)
+
+
+@blueprint.after_request
+def after_request_logging(response):
+    current_app.logger.info(f"User: {get_username()} from {request.remote_addr} accessed url: {request.url}")
+    return response
 
 
 @blueprint.route("/auth/login")
@@ -103,6 +109,4 @@ def api_years_months():
 @blueprint.route("/")
 @oidc_required
 def show():
-    current_app.logger.info(f"User {session.get('user', {}).
-            get('preferred_username', 'unknown')} accessed url: {request.url}")
     return render_template("show.html")

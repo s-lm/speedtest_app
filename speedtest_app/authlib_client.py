@@ -1,8 +1,7 @@
-import os
-import base64
 from flask import current_app, redirect, session, request
 from flask.helpers import url_for
 from authlib.jose import jwt, JoseError
+from authlib.integrations.base_client.errors import MismatchingStateError
 from authlib.integrations.flask_client import OAuth
 
 
@@ -10,10 +9,10 @@ oauth = OAuth()
 
 
 def init_oauth(app):
-    """Initialize OAuth client.""" 
+    """Initialize OAuth client."""
     global oauth
     if not app.config.get("ENABLE_OIDC", False):
-        return  
+        return
 
     oauth.init_app(app)
     oauth.register(
@@ -58,22 +57,30 @@ def is_token_expired() -> bool:
 def do_login():
     redirect_uri = url_for(".auth_callback", _external=True)
     nonce = base64.urlsafe_b64encode(os.urandom(16)).decode("utf-8")
-    session["oidc_nonce"] = nonce
     state = request.args.get("state") or url_for(".show")
-    return oauth.oidc.authorize_redirect(redirect_uri, nonce=nonce, state=state)
+    return oauth.oidc.authorize_redirect(redirect_uri, state=state)
 
 
 def callback():
-    nonce = session.pop("oidc_nonce", None)
-    token = oauth.oidc.authorize_access_token()
-    userinfo = oauth.oidc.parse_id_token(token, nonce=nonce)
-    session["token"] = token
-    # session["user"] = userinfo
-    current_app.logger.debug(f"Token: {token}")
-    current_app.logger.info(f"User {userinfo['preferred_username']} logged in successfully.")
-    return redirect(request.args.get("state") or url_for(".show"))
+    try:
+        token = oauth.oidc.authorize_access_token()
+        userinfo = oauth.oidc.parse_id_token(token, nonce=nonce)
+        session["token"] = token
+        current_app.logger.debug(f"Token: {token}")
+        current_app.logger.info(f"User {userinfo['preferred_username']} logged in successfully.")
+        return redirect(request.args.get("state") or url_for(".show"))
+    except MismatchingStateError as e:
+        current_app.logger.info(f"OAuth MismatchingStateError during callback: {e}")
+        return redirect(url_for(".logout", error="CSRF Warning! State not equal in request and response. Please try again."))
 
 
 def reset_session() -> None:
-    session.pop("oidc_nonce", None)
-    session.pop("token", None)
+    session.clear()
+
+
+def get_username() -> str:
+    """Get the username from the session."""
+    if "token" not in session or "userinfo" not in session["token"]:
+        return "unknown"
+    return session["token"]["userinfo"].get("preferred_username", "unknown")
+
