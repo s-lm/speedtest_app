@@ -1,6 +1,4 @@
 import datetime
-import os
-import base64
 from flask import Blueprint, render_template, current_app, request, redirect, session, jsonify
 from flask.helpers import url_for
 from .database import SpeedTest
@@ -47,7 +45,6 @@ def auth_callback():
 @blueprint.route("/auth/logout")
 def logout():
     reset_session()
-    # return redirect(url_for("routing.login"))
     return render_template("login.html")
 
 

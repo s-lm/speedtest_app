@@ -56,7 +56,6 @@ def is_token_expired() -> bool:
 
 def do_login():
     redirect_uri = url_for(".auth_callback", _external=True)
-    nonce = base64.urlsafe_b64encode(os.urandom(16)).decode("utf-8")
     state = request.args.get("state") or url_for(".show")
     return oauth.oidc.authorize_redirect(redirect_uri, state=state)
 
@@ -64,10 +63,9 @@ def do_login():
 def callback():
     try:
         token = oauth.oidc.authorize_access_token()
-        userinfo = oauth.oidc.parse_id_token(token, nonce=nonce)
         session["token"] = token
         current_app.logger.debug(f"Token: {token}")
-        current_app.logger.info(f"User {userinfo['preferred_username']} logged in successfully.")
+        current_app.logger.info(f"User {get_username()} logged in successfully.")
         return redirect(request.args.get("state") or url_for(".show"))
     except MismatchingStateError as e:
         current_app.logger.info(f"OAuth MismatchingStateError during callback: {e}")
