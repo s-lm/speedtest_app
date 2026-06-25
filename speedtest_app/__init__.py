@@ -28,7 +28,11 @@ def create_app(base_config = None):
 
     @app.context_processor
     def inject_config():
-        return dict(ENABLE_OIDC=app.config.get("ENABLE_OIDC", False))
+        return dict(
+            ENABLE_OIDC=app.config.get("ENABLE_OIDC", False),
+            PLAN_DOWNLOAD=app.config.get("PLAN_DOWNLOAD", 0),
+            PLAN_UPLOAD=app.config.get("PLAN_UPLOAD", 0),
+        )
 
     # init oidc
     init_oauth(app)

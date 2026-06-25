@@ -24,6 +24,15 @@
 <body>
     {% from "_toolbar.html" import toolbar %}
     {{ toolbar(session.token.userinfo if session.get('token') else None, ENABLE_OIDC) }}
+
+    <div id="status-bar" class="status-bar">
+        <span id="freshness" class="badge badge-muted">Loading…</span>
+        <div class="status-actions">
+            <button id="runNow" type="button" class="action-btn">Run test now</button>
+            <a id="exportLink" class="action-btn" href="/api/export?format=csv" download>Export CSV</a>
+        </div>
+    </div>
+
     <div class="year-month-selector">
         <label for="yearSelect">Year:</label>
         <select id="yearSelect"></select>
@@ -31,12 +40,17 @@
         <select id="monthSelect"></select>
     </div>
 
+    <div id="stat-cards" class="stat-cards"></div>
+
     <div class="chart-container">
         <canvas id="speedChart"></canvas>
         <div id="chart-status" class="chart-status" hidden></div>
     </div>
 
     <script>
+        const PLAN_DOWNLOAD = {{ PLAN_DOWNLOAD }};
+        const PLAN_UPLOAD = {{ PLAN_UPLOAD }};
+
         let allPoints = [];
 
         // Chart status overlay helpers (loading / empty / error states)
@@ -49,21 +63,86 @@
             chartStatus.hidden = true;
         }
 
+        // ---- summary statistics ----
+        function quantile(sorted, p) {
+            if (!sorted.length) return NaN;
+            const idx = (sorted.length - 1) * p;
+            const lo = Math.floor(idx), hi = Math.ceil(idx);
+            return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+        }
+        function computeStats(values) {
+            if (!values.length) return null;
+            const sorted = [...values].sort((a, b) => a - b);
+            const sum = values.reduce((a, b) => a + b, 0);
+            return {
+                min: sorted[0],
+                max: sorted[sorted.length - 1],
+                avg: sum / values.length,
+                median: quantile(sorted, 0.5),
+                p5: quantile(sorted, 0.05),
+                p95: quantile(sorted, 0.95),
+            };
+        }
+
+        // ---- summary cards (points are newest-first) ----
+        function renderCards(points) {
+            const container = document.getElementById('stat-cards');
+            if (!points.length) { container.innerHTML = ''; return; }
+            const latest = points[0];
+            const dl = points.map(p => p.download / 1_000_000);
+            const ul = points.map(p => p.upload / 1_000_000);
+            const pg = points.map(p => p.ping);
+            container.innerHTML = [
+                card('Download', latest.download / 1_000_000, computeStats(dl), 'Mbit/s', PLAN_DOWNLOAD),
+                card('Upload', latest.upload / 1_000_000, computeStats(ul), 'Mbit/s', PLAN_UPLOAD),
+                card('Ping', latest.ping, computeStats(pg), 'ms', 0),
+            ].join('');
+        }
+
+        function card(title, latest, s, unit, plan) {
+            const fmt = v => Number.isFinite(v) ? v.toFixed(unit === 'ms' ? 0 : 1) : '–';
+            let planRow = '';
+            if (plan > 0) {
+                const pct = (s.median / plan) * 100;
+                const cls = pct >= 80 ? 'plan-good' : (pct >= 50 ? 'plan-ok' : 'plan-bad');
+                planRow = `<div class="card-plan ${cls}">${pct.toFixed(0)}% of ${plan} ${unit} plan</div>`;
+            }
+            return `
+            <div class="stat-card">
+                <div class="card-title">${title}</div>
+                <div class="card-latest">${fmt(latest)}<span class="card-unit"> ${unit}</span></div>
+                ${planRow}
+                <div class="card-grid">
+                    <span>median</span><span>${fmt(s.median)}</span>
+                    <span>min</span><span>${fmt(s.min)}</span>
+                    <span>max</span><span>${fmt(s.max)}</span>
+                    <span>p5–p95</span><span>${fmt(s.p5)}–${fmt(s.p95)}</span>
+                </div>
+            </div>`;
+        }
+
         // Chart initialization (ONCE, at startup)
         const ctx = document.getElementById('speedChart').getContext('2d');
         const isDark = document.documentElement.classList.contains('dark');
+        const datasets = [
+            { label: 'Download Speed (Mbit/s)', data: [], borderColor: 'blue', fill: false, yAxisID: 'A' },
+            { label: 'Upload Speed (Mbit/s)', data: [], borderColor: 'red', fill: false, yAxisID: 'A' },
+            { label: 'Ping (ms)', data: [], borderColor: 'green', fill: false, yAxisID: 'B' },
+        ];
+        if (PLAN_DOWNLOAD > 0) datasets.push({ label: 'Plan download', data: [], borderColor: 'rgba(0,0,255,0.45)', borderDash: [6, 4], pointRadius: 0, fill: false, yAxisID: 'A' });
+        if (PLAN_UPLOAD > 0) datasets.push({ label: 'Plan upload', data: [], borderColor: 'rgba(255,0,0,0.45)', borderDash: [6, 4], pointRadius: 0, fill: false, yAxisID: 'A' });
+
         window.speedChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: [],
-                datasets: [
-                    { label: 'Download Speed (Mbit/s)', data: [], borderColor: 'blue', fill: false, yAxisID: 'A' },
-                    { label: 'Upload Speed (Mbit/s)', data: [], borderColor: 'red', fill: false, yAxisID: 'A' },
-                    { label: 'Ping (ms)', data: [], borderColor: 'green', fill: false, yAxisID: 'B' }
-                ]
-            },
+            data: { labels: [], datasets },
             options: createChartOptions(isDark)
         });
+
+        function setPlanLine(label, value, x0, x1) {
+            if (!(value > 0)) return;
+            const ds = window.speedChart.data.datasets.find(d => d.label === label);
+            if (ds) ds.data = [{ x: x0, y: value }, { x: x1, y: value }];
+        }
 
         function updateChart(points) {
             if (!window.speedChart) {
@@ -75,9 +154,22 @@
             const uploadData = points.map(p => ({ x: p.timestamp, y: p.upload / 1_000_000, meta: p }));
             const pingData = points.map(p => ({ x: p.timestamp, y: p.ping, meta: p }));
 
-            window.speedChart.data.datasets[0].data = downloadData;
+            const dl = window.speedChart.data.datasets[0];
+            dl.data = downloadData;
+            // Emphasise points where the test server changed (affects comparability)
+            dl.pointRadius = points.map(p => p.serverChanged ? 5 : 2);
+            dl.pointBackgroundColor = points.map(p => p.serverChanged ? 'orange' : 'blue');
+
             window.speedChart.data.datasets[1].data = uploadData;
             window.speedChart.data.datasets[2].data = pingData;
+
+            if (points.length) {
+                const newest = points[0].timestamp;
+                const oldest = points[points.length - 1].timestamp;
+                setPlanLine('Plan download', PLAN_DOWNLOAD, oldest, newest);
+                setPlanLine('Plan upload', PLAN_UPLOAD, oldest, newest);
+            }
+
             window.speedChart.update();
         }
 
@@ -170,6 +262,10 @@
                                     ];
                                 }
                                 return '';
+                            },
+                            afterLabel: function (context) {
+                                const p = context.raw.meta;
+                                return (p && p.serverChanged) ? '⚠ server changed' : '';
                             }
                         }
                     }
@@ -236,6 +332,8 @@
 
         function fetchAndRender(year, month) {
             showStatus('Loading…');
+            document.getElementById('exportLink').href =
+                `/api/export?year=${year}&month=${month}&format=csv`;
             fetch(`/api/data?year=${year}&month=${month}`)
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -253,7 +351,13 @@
                         ip: row.ip,
                         isp: row.isp
                     }));
+                    // Flag points where the server changed vs the previous (older) test
+                    allPoints.forEach((p, i) => {
+                        const older = allPoints[i + 1];
+                        p.serverChanged = older ? p.server !== older.server : false;
+                    });
                     updateChart(allPoints);
+                    renderCards(allPoints);
                     if (allPoints.length === 0) {
                         showStatus('No data for this period');
                     } else {
@@ -265,6 +369,64 @@
                     showStatus('Failed to load data');
                 });
         }
+
+        // ---- freshness / reliability badge ----
+        function relTime(iso) {
+            const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+            if (mins < 60) return `${mins} min ago`;
+            const hrs = Math.round(mins / 60);
+            if (hrs < 48) return `${hrs}h ago`;
+            return `${Math.round(hrs / 24)}d ago`;
+        }
+        function loadStatus() {
+            const badge = document.getElementById('freshness');
+            fetch('/api/status')
+                .then(r => r.ok ? r.json() : Promise.reject(r.status))
+                .then(s => {
+                    if (!s.last_test) {
+                        badge.textContent = 'No tests yet';
+                        badge.className = 'badge badge-muted';
+                        return;
+                    }
+                    // Tests run every 8h; older than ~9h likely means the scheduler stalled
+                    const ageHours = (Date.now() - new Date(s.last_test)) / 3600000;
+                    badge.className = 'badge ' + (ageHours > 9 ? 'badge-bad' : 'badge-good');
+                    let txt = `Last test ${relTime(s.last_test)}`;
+                    if (s.total_failures) txt += ` · ${s.total_failures} failure${s.total_failures > 1 ? 's' : ''}`;
+                    badge.textContent = txt;
+                })
+                .catch(() => {
+                    badge.textContent = 'Status unavailable';
+                    badge.className = 'badge badge-muted';
+                });
+        }
+
+        // ---- manual "run test now" ----
+        document.getElementById('runNow').addEventListener('click', () => {
+            const btn = document.getElementById('runNow');
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Running…';
+            fetch('/api/run', { method: 'POST' })
+                .then(r => r.json().then(j => ({ ok: r.ok, j })))
+                .then(({ ok, j }) => {
+                    if (!ok) throw new Error(j.status || 'failed');
+                    loadStatus();
+                    const ys = document.getElementById('yearSelect');
+                    const ms = document.getElementById('monthSelect');
+                    if (ys.value) fetchAndRender(ys.value, ms.value);
+                })
+                .catch(err => {
+                    console.error('Run failed:', err);
+                    alert('Test failed or another run is already in progress.');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = original;
+                });
+        });
+
+        loadStatus();
     </script>
 </body>
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Text, Integer, Float, DateTime
@@ -21,4 +21,15 @@ class SpeedTest(db.Model):
     client_ip: Mapped[str] = mapped_column(Text)
     client_isp: Mapped[str] = mapped_column(Text)
     client_country: Mapped[str] = mapped_column(Text)
+
+
+class SpeedTestFailure(db.Model):
+    """A speedtest run that failed before a result could be stored."""
+    __tablename__ = "speedtest_failure"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True)
+    error: Mapped[str] = mapped_column(Text)
 
