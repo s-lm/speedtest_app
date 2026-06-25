@@ -31,10 +31,23 @@
         <select id="monthSelect"></select>
     </div>
 
-    <canvas id="speedChart" width="800" height="400"></canvas>
+    <div class="chart-container">
+        <canvas id="speedChart"></canvas>
+        <div id="chart-status" class="chart-status" hidden></div>
+    </div>
 
     <script>
         let allPoints = [];
+
+        // Chart status overlay helpers (loading / empty / error states)
+        const chartStatus = document.getElementById('chart-status');
+        function showStatus(msg) {
+            chartStatus.textContent = msg;
+            chartStatus.hidden = false;
+        }
+        function hideStatus() {
+            chartStatus.hidden = true;
+        }
 
         // Chart initialization (ONCE, at startup)
         const ctx = document.getElementById('speedChart').getContext('2d');
@@ -70,6 +83,9 @@
 
         function createChartOptions(dark) {
             return {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
                 interaction: {
                     mode: 'nearest',
                     intersect: true
@@ -77,7 +93,7 @@
                 scales: {
                     x: {
                         type: 'time',
-                        time: { unit: 'day' },
+                        time: {},
                         ticks: {
                             color: dark ? '#ccc' : '#111'
                         },
@@ -168,8 +184,12 @@
         }
 
         // Fetch years and months and populate selectors
+        showStatus('Loading…');
         fetch('/api/years_months')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
             .then(data => {
                 const yearSelect = document.getElementById('yearSelect');
                 const monthSelect = document.getElementById('monthSelect');
@@ -189,7 +209,8 @@
                     months.forEach(month => {
                         const option = document.createElement('option');
                         option.value = month;
-                        option.textContent = month.toString().padStart(2, '0');
+                        option.textContent = new Date(2000, month - 1)
+                            .toLocaleString('default', { month: 'long' });
                         monthSelect.appendChild(option);
                     });
                 }
@@ -204,12 +225,22 @@
                     yearSelect.value = years[0];
                     updateMonths();
                     fetchAndRender(yearSelect.value, monthSelect.value);
+                } else {
+                    showStatus('No data available yet');
                 }
+            })
+            .catch(err => {
+                console.error('Failed to load filters:', err);
+                showStatus('Failed to load data');
             });
 
         function fetchAndRender(year, month) {
+            showStatus('Loading…');
             fetch(`/api/data?year=${year}&month=${month}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return response.json();
+                })
                 .then(result => {
                     allPoints = result.data.map(row => ({
                         timestamp: row.timestamp,
@@ -223,6 +254,15 @@
                         isp: row.isp
                     }));
                     updateChart(allPoints);
+                    if (allPoints.length === 0) {
+                        showStatus('No data for this period');
+                    } else {
+                        hideStatus();
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to load data:', err);
+                    showStatus('Failed to load data');
                 });
         }
     </script>

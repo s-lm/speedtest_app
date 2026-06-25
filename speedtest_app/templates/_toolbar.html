@@ -6,9 +6,10 @@
         <h1>Speedtest App</h1>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;">
+        {% if ENABLE_OIDC -%}
         <div class="toolbar-dropdown">
             <button class="toolbar-dropbtn" aria-haspopup="true" aria-expanded="false">
-                {% if ENABLE_OIDC and user -%}
+                {% if user -%}
                 <img src="{{ user.picture }}" alt="User Picture" class="toolbar-usericon">
                 <span>{{ user.preferred_username or user.name or user.email }}</span>
                 {% else -%}
@@ -22,14 +23,14 @@
                     <span class="theme-icon"></span>
                     <span>Toggle Theme</span>
                 </button>
-                {% if ENABLE_OIDC and user -%}
+                {% if user -%}
                 <form method="get" action="{{ url_for('routing.logout') }}" style="margin:0;padding:0;">
                     <button type="submit" class="logout-btn">
                         <span class="logout-icon"></span>
                         <span>Logout</span>
                     </button>
                 </form>
-                {% elif ENABLE_OIDC -%}
+                {% else -%}
                 <form method="get" action="{{ url_for('routing.login') }}" style="margin:0;padding:0;">
                     <button type="submit" class="login-btn">
                         <span class="login-icon"></span>
@@ -39,6 +40,11 @@
                 {% endif -%}
             </div>
         </div>
+        {% else -%}
+        <button id="themeToggle" type="button" class="toolbar-iconbtn" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon"></span>
+        </button>
+        {% endif -%}
     </div>
 </div>
 {% endmacro %}

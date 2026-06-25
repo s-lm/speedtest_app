@@ -35,11 +35,31 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
+.chart-container {
+    position: relative;
+    width: 100%;
+}
+
 canvas {
     background-color: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 1rem;
+    box-sizing: border-box;
+}
+
+.chart-status {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--fg);
+    pointer-events: none;
+}
+.chart-status[hidden] {
+    display: none;
 }
 
 select {
@@ -49,6 +69,7 @@ select {
     color: var(--fg);
     border: 1px solid var(--border);
     border-radius: 4px;
+    cursor: pointer;
 }
 
 h1 {
@@ -167,8 +188,30 @@ h2 {
 .toolbar-dropdown:hover .toolbar-dropdown-content,
 .toolbar-dropdown:focus-within .toolbar-dropdown-content,
 .toolbar-dropdown-content:hover,
-.toolbar-dropdown-content:focus-within {
+.toolbar-dropdown-content:focus-within,
+.toolbar-dropdown.open .toolbar-dropdown-content {
     display: block;
+}
+
+/* Standalone icon button (e.g. theme toggle when auth is disabled) */
+.toolbar-iconbtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    padding: 0.4rem;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.toolbar-iconbtn:hover {
+    background: var(--border);
+}
+.toolbar-iconbtn .theme-icon {
+    margin-right: 0;
+    width: 1.4em;
+    height: 1.4em;
 }
 .toolbar-caret {
     margin-left: 0.3rem;
@@ -207,4 +250,14 @@ html.dark .theme-icon {
 .login-icon {
     mask-image: url('/static/img/login.svg');
     -webkit-mask-image: url('/static/img/login.svg');
+}
+
+/* Smaller margins on narrow screens */
+@media (max-width: 600px) {
+    body {
+        margin: 0.75rem;
+    }
+    h1 {
+        font-size: 1.4rem;
+    }
 }
