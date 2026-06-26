@@ -12,9 +12,16 @@ import sqlalchemy as db
 blueprint = Blueprint("routing", __name__)
 
 
-def _filtered_query(year, month):
-    """SpeedTest query (newest first) optionally filtered by year and month."""
+def _filtered_query(year, month, days=None):
+    """SpeedTest query (newest first), filtered by year/month or a rolling window.
+
+    If ``days`` is given it takes precedence and returns the last ``days`` days;
+    otherwise the optional ``year``/``month`` filters apply.
+    """
     query = SpeedTest.query.order_by(SpeedTest.timestamp.desc())
+    if days:
+        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+        return query.filter(SpeedTest.timestamp >= cutoff)
     if year:
         query = query.filter(db.extract('year', SpeedTest.timestamp) == year)
     if month:
@@ -80,12 +87,14 @@ def logout():
 def api_data():
     year = request.args.get("year", type=int)
     month = request.args.get("month", type=int)
-    items = _filtered_query(year, month).all()
+    days = request.args.get("days", type=int)
+    items = _filtered_query(year, month, days).all()
     results = [_row_dict(r) for r in items]
     return jsonify({
         "data": results,
         "year": year,
         "month": month,
+        "days": days,
         "total": len(results),
     })
 
@@ -144,9 +153,13 @@ def api_export():
     """Download the selected period as CSV or JSON."""
     year = request.args.get("year", type=int)
     month = request.args.get("month", type=int)
+    days = request.args.get("days", type=int)
     fmt = request.args.get("format", "csv").lower()
-    items = _filtered_query(year, month).all()
-    suffix = "-".join(str(p) for p in (year, month) if p) or "all"
+    items = _filtered_query(year, month, days).all()
+    if days:
+        suffix = f"last-{days}d"
+    else:
+        suffix = "-".join(str(p) for p in (year, month) if p) or "all"
 
     if fmt == "json":
         return Response(

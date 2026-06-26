@@ -34,10 +34,19 @@
     </div>
 
     <div class="year-month-selector">
-        <label for="yearSelect">Year:</label>
-        <select id="yearSelect"></select>
-        <label for="monthSelect">Month:</label>
-        <select id="monthSelect"></select>
+        <label for="rangeSelect">View:</label>
+        <select id="rangeSelect">
+            <option value="month">By month</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+        </select>
+        <span id="month-fields">
+            <label for="yearSelect">Year:</label>
+            <select id="yearSelect"></select>
+            <label for="monthSelect">Month:</label>
+            <select id="monthSelect"></select>
+        </span>
     </div>
 
     <div id="stat-cards" class="stat-cards"></div>
@@ -132,10 +141,37 @@
         if (PLAN_DOWNLOAD > 0) datasets.push({ label: 'Plan download', data: [], borderColor: 'rgba(0,0,255,0.45)', borderDash: [6, 4], pointRadius: 0, fill: false, yAxisID: 'A' });
         if (PLAN_UPLOAD > 0) datasets.push({ label: 'Plan upload', data: [], borderColor: 'rgba(255,0,0,0.45)', borderDash: [6, 4], pointRadius: 0, fill: false, yAxisID: 'A' });
 
+        // Draws a small triangle on the x-axis wherever the test server changed,
+        // so the data lines stay clean and the values are easy to compare.
+        const serverChangeMarkers = {
+            id: 'serverChangeMarkers',
+            afterDatasetsDraw(chart) {
+                const changes = chart.$serverChanges;
+                if (!changes || !changes.length) return;
+                const { ctx, chartArea, scales } = chart;
+                const dark = document.documentElement.classList.contains('dark');
+                ctx.save();
+                ctx.fillStyle = dark ? '#e0a030' : '#c97a00';
+                changes.forEach(ts => {
+                    const px = scales.x.getPixelForValue(new Date(ts).getTime());
+                    if (px < chartArea.left || px > chartArea.right) return;
+                    const y = chartArea.bottom;
+                    ctx.beginPath();
+                    ctx.moveTo(px, y - 8);   // apex pointing up
+                    ctx.lineTo(px - 5, y);
+                    ctx.lineTo(px + 5, y);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+                ctx.restore();
+            }
+        };
+
         window.speedChart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets },
-            options: createChartOptions(isDark)
+            options: createChartOptions(isDark),
+            plugins: [serverChangeMarkers]
         });
 
         function setPlanLine(label, value, x0, x1) {
@@ -156,9 +192,11 @@
 
             const dl = window.speedChart.data.datasets[0];
             dl.data = downloadData;
-            // Emphasise points where the test server changed (affects comparability)
-            dl.pointRadius = points.map(p => p.serverChanged ? 5 : 2);
-            dl.pointBackgroundColor = points.map(p => p.serverChanged ? 'orange' : 'blue');
+            // Record where the test server changed; the markers are drawn on the
+            // x-axis by the serverChangeMarkers plugin rather than recolouring the line.
+            window.speedChart.$serverChanges = points
+                .filter(p => p.serverChanged)
+                .map(p => p.timestamp);
 
             window.speedChart.data.datasets[1].data = uploadData;
             window.speedChart.data.datasets[2].data = pingData;
@@ -312,15 +350,15 @@
                 }
                 yearSelect.onchange = () => {
                     updateMonths();
-                    fetchAndRender(yearSelect.value, monthSelect.value);
+                    refresh();
                 };
                 monthSelect.onchange = () => {
-                    fetchAndRender(yearSelect.value, monthSelect.value);
+                    refresh();
                 };
                 if (years.length > 0) {
                     yearSelect.value = years[0];
                     updateMonths();
-                    fetchAndRender(yearSelect.value, monthSelect.value);
+                    refresh();
                 } else {
                     showStatus('No data available yet');
                 }
@@ -330,11 +368,23 @@
                 showStatus('Failed to load data');
             });
 
-        function fetchAndRender(year, month) {
+        // Build the /api query string from the current view selection.
+        function buildParams() {
+            const mode = document.getElementById('rangeSelect').value;
+            if (mode === 'month') {
+                const y = document.getElementById('yearSelect').value;
+                const m = document.getElementById('monthSelect').value;
+                return `year=${y}&month=${m}`;
+            }
+            return `days=${mode}`;
+        }
+
+        function refresh() {
+            const params = buildParams();
             showStatus('Loading…');
             document.getElementById('exportLink').href =
-                `/api/export?year=${year}&month=${month}&format=csv`;
-            fetch(`/api/data?year=${year}&month=${month}`)
+                `/api/export?${params}&format=csv`;
+            fetch(`/api/data?${params}`)
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     return response.json();
@@ -401,6 +451,13 @@
                 });
         }
 
+        // ---- view selector (month vs rolling window) ----
+        document.getElementById('rangeSelect').addEventListener('change', (e) => {
+            document.getElementById('month-fields').style.display =
+                e.target.value === 'month' ? '' : 'none';
+            refresh();
+        });
+
         // ---- manual "run test now" ----
         document.getElementById('runNow').addEventListener('click', () => {
             const btn = document.getElementById('runNow');
@@ -412,9 +469,7 @@
                 .then(({ ok, j }) => {
                     if (!ok) throw new Error(j.status || 'failed');
                     loadStatus();
-                    const ys = document.getElementById('yearSelect');
-                    const ms = document.getElementById('monthSelect');
-                    if (ys.value) fetchAndRender(ys.value, ms.value);
+                    refresh();
                 })
                 .catch(err => {
                     console.error('Run failed:', err);

@@ -26,8 +26,9 @@ def run_speedtest() -> bool:
 
 def _run_and_store() -> bool:
     try:
+        server_ids = current_app.config.get("SPEEDTEST_SERVER_IDS", []) or None
         probe = speedtest.Speedtest()
-        probe.get_servers()
+        probe.get_servers(server_ids)
         probe.get_best_server()
         probe.download()
         probe.upload()
