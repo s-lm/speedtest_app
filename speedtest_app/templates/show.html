@@ -263,7 +263,30 @@
                 plugins: {
                     legend: {
                         labels: {
-                            color: dark ? '#ccc' : '#111'
+                            usePointStyle: true,
+                            color: dark ? '#ccc' : '#111',
+                            generateLabels(chart) {
+                                const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                items.forEach(it => { it.pointStyle = 'line'; });
+                                // Explain the x-axis triangles, only when present in this view
+                                const changes = chart.$serverChanges;
+                                if (changes && changes.length) {
+                                    const color = document.documentElement.classList.contains('dark') ? '#e0a030' : '#c97a00';
+                                    items.push({
+                                        text: 'Server changed',
+                                        pointStyle: 'triangle',
+                                        fillStyle: color,
+                                        strokeStyle: color,
+                                        lineWidth: 0
+                                    });
+                                }
+                                return items;
+                            }
+                        },
+                        onClick(e, legendItem, legend) {
+                            // Ignore the synthetic "Server changed" marker entry
+                            if (legendItem.datasetIndex === undefined) return;
+                            Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
                         }
                     },
                     tooltip: {
