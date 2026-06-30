@@ -490,13 +490,13 @@
             fetch('/api/run', { method: 'POST' })
                 .then(r => r.json().then(j => ({ ok: r.ok, j })))
                 .then(({ ok, j }) => {
-                    if (!ok) throw new Error(j.status || 'failed');
+                    if (!ok) throw new Error(j.error || j.status || 'failed');
                     loadStatus();
                     refresh();
                 })
                 .catch(err => {
                     console.error('Run failed:', err);
-                    alert('Test failed or another run is already in progress.');
+                    alert('Test failed: ' + err.message);
                 })
                 .finally(() => {
                     btn.disabled = false;

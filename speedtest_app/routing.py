@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, current_app, request, redirect, se
 from flask.helpers import url_for
 from .database import SpeedTest, SpeedTestFailure
 from .authlib_client import oidc_required, do_login, callback, reset_session, get_username
-from .run_speedtest import run_speedtest
+from .run_speedtest import run_speedtest, run_speedtest_status
 import sqlalchemy as db
 
 
@@ -141,10 +141,12 @@ def api_status():
 @oidc_required
 def api_run():
     """Trigger a speedtest immediately. Runs synchronously (~30s)."""
-    ok = run_speedtest()
+    ok, reason = run_speedtest_status()
     if ok:
         return jsonify({"status": "ok"})
-    return jsonify({"status": "busy_or_failed"}), 409
+    if reason == "busy":
+        return jsonify({"status": "busy", "error": "A test is already running."}), 409
+    return jsonify({"status": "failed", "error": reason}), 502
 
 
 @blueprint.route("/api/export")
